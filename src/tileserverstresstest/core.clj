@@ -13,8 +13,7 @@
     (try
       (Thread/sleep 200)
       (let [start (. System (nanoTime))
-            res (apply fnct args)
-            end (. System (nanoTime))]
+            res (apply fnct args)]
         (assoc res :elapsed-time (/ (double (- (. System (nanoTime)) start)) 1000000.0)))
       (catch Throwable e
         {:status 500, :exception e}))))
@@ -32,6 +31,10 @@
 (comment
 
   (def res @(run-async client/get "http://localhost:4003/api/tms/12/4036/2564.png"))
-  (def res (map :elapsed-time (run-times 100 (partial run-async client/get "http://localhost:4003/api/tms/12/4036/2564.png"))))
+  (def res (run-times 1000 (partial run-async client/get "http://localhost:4003/api/tms/12/4036/2564.png")))
+  (def times (map :elapsed-time (filter #(= 200 (:status %)) res)))
+
+  (use '(incanter core stats charts datasets))
+  (view (line-chart (range 0 (count times)) times))
 
   )
