@@ -2,7 +2,9 @@
   (:gen-class)
   (:require
     [clj-http.client :as client]
-    [clojure.data.json :as json]))
+    [incanter.core :refer :all]
+    [incanter.charts :refer :all]
+    [incanter.stats :refer :all]))
 
 (defn run-async
   "Run the function on a separate thread of execution.
@@ -22,6 +24,15 @@
   (let [results (for [_ (range 0 n)] (fnc))]
     (map (fn [f] @f) results)))
 
+
+(defn graph-for [endpoint req-count]
+  (let [elapsed-times (->> endpoint
+                           (partial run-async client/get)
+                           (run-times req-count)
+                           (filter #(= 200 (:status %)))
+                           (map :elapsed-time))]
+    (view (line-chart (range 0 (count elapsed-times)) elapsed-times))))
+
 (defn -main
   "Application entry point"
   [fct & args]
@@ -36,5 +47,7 @@
 
   (use '(incanter core stats charts datasets))
   (view (line-chart (range 0 (count times)) times))
+
+  (graph-for "http://localhost:4003/api/tms/12/4036/2564.png" 100)
 
   )
