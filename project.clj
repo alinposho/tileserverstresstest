@@ -6,7 +6,9 @@
   :dependencies [[org.clojure/clojure "1.7.0"]
                  [clj-http "1.1.2"]
                  [org.clojure/data.json "0.2.4"]
-                 [incanter "1.5.6"]]
+                 [incanter "1.5.6"]
+                 [org.clojure/tools.logging "0.3.1"]
+                 [log4j/log4j "1.2.17"]]
   :main ^:skip-aot tileserverstresstest.core
   :target-path "target/%s"
   :profiles {:uberjar {:aot :all}})
