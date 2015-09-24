@@ -28,15 +28,29 @@
   (let [results (for [_ (range 0 n)] (fnc))]
     (map (fn [f] @f) results)))
 
+(defn get-async-times [endpoint req-count]
+  (->> endpoint
+       (partial run-async client/get)
+       (run-times (if (string? req-count) (Integer/parseInt req-count) req-count))))
 
-(defn graph-for [endpoint req-count]
-  (let [responses (->> endpoint
-                       (partial run-async client/get)
-                       (run-times (if (string? req-count) (Integer/parseInt req-count) req-count))
-                       (filter #(= 200 (:status %))))
-        elapsed-times (map :elapsed-time responses)
-        request-time (map :request-start-time responses)]
-    (view (line-chart request-time elapsed-times :legend true :x-label "Request start time(ms)" :y-label "Request duration(ms)"))))
+(defn generate-tile [base-endpoint start-lat end-lat start-long end-long]
+  (for [lat (range start-lat end-lat)
+        long (range start-long end-long)]
+    (run-async client/get (str base-endpoint lat "/" long ".png"))))
+
+(defn graph-for
+  ([{:keys [base-endpoint start-lat end-lat start-long end-long req-count]}]
+   (let [results (map (fn [f] @f)
+                      (flatten
+                        (repeatedly req-count (partial generate-tile base-endpoint start-lat end-lat start-long end-long))))
+         request-durations (map :elapsed-time (filter #(= 200 (:status %)) results))
+         request-start-times (map :request-start-time results)]
+     (view (line-chart request-start-times request-durations :title "Different tiles"))))
+  ([endpoint req-count]
+   (let [responses (filter #(= 200 (:status %)) (get-async-times endpoint req-count))
+         elapsed-times (map :elapsed-time responses)
+         request-time (map :request-start-time responses)]
+     (view (line-chart request-time elapsed-times :legend true :x-label "Request start time(ms)" :y-label "Request duration(ms)")))))
 
 (defn -main
   "Application entry point"
@@ -51,14 +65,30 @@
   (def res @(run-async client/get "http://localhost:4003/api/tms/12/4036/2564.png"))
   (def res (run-times 100 (partial run-async client/get "http://localhost:4003/api/tms/12/4036/2564.png")))
   (def request-durations (map :elapsed-time (filter #(= 200 (:status %)) res)))
-  (def request-start-times (map :start-time res))
+  (def request-start-times (map :request-start-time res))
 
   (use '(incanter core stats charts datasets))
   (view (line-chart (range 0 (count times)) times))
-  (view (line-chart request-start-times request-durations))
+  (view (line-chart request-start-times request-durations :title "Python Server"))
 
   (graph-for "http://localhost:4003/api/tms/12/4036/2564.png" 100)
 
-  (def args ["graph-for" "http://localhost:4003/api/tms/12/4036/2564.png" "100"])
+
+  ;; Generate graph for a list of coordinates
+  (def res
+    (map (fn [f] @f)
+         (flatten (repeatedly 10 (partial generate-tile "http://localhost:4003/api/tms/12/" 4036 4040 2564 2566)))))
+
+  (def request-durations (map :elapsed-time (filter #(= 200 (:status %)) res)))
+  (def request-start-times (map :request-start-time res))
+  (view (line-chart request-start-times request-durations :title "Different tiles"))
+
+  ;; And all in one function
+  (graph-for {:base-endpoint "http://localhost:4003/api/tms/12/"
+              :start-lat     4036
+              :end-lat       4030
+              :start-long    2564
+              :end-long      2568
+              :req-count     10})
 
   )
