@@ -110,4 +110,19 @@
 
   (graph-for-urls urls)
 
+
+  ;; Post files to the shapefile importer web server URL
+  (client/post "http://192.168.200.2:4002"
+               {:multipart [["title" "Foo"]
+                            ["Content/type" "text/plain"]
+                            ["file" (clojure.java.io/file "resources/firehtdrants.zip")]]})
+
+  (def res
+    (map (fn [f] @f)
+         (flatten (repeatedly 10 (partial generate-tile "http://localhost:4003/api/tms/12/" 4036 4040 2564 2566)))))
+
+  (def request-durations (map :elapsed-time (filter #(= 200 (:status %)) res)))
+  (def request-start-times (map :request-start-time res))
+  (view (line-chart request-start-times request-durations :title "Different tiles"))
+
   )
