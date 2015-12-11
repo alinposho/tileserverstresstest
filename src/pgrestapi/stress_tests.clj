@@ -1,45 +1,7 @@
 (ns pgrestapi.stress-tests
   (:require
     [clj-http.client :as client]
-    [incanter.core :refer :all]
-    [incanter.charts :refer :all]
-    [incanter.stats :refer :all]
-    [clojure.tools.logging :as log]))
-
-(defn- nano-to-millis [nanos]
-  (/ (double nanos) 1000000.0))
-
-(def ^:const ten-minutes-in-millis (* 10 60 1000))
-
-(defn run-async-with-timing
-  "Run the function on a separate thread of execution.
-  Exception are materialized and returned in the response.
-  Returns a future."
-  [fnct & args]
-  (future
-    (try
-      (Thread/sleep 200)
-      (let [start (. System (nanoTime))
-            res (apply fnct args)]
-        (assoc res :elapsed-time (nano-to-millis (- (. System (nanoTime)) start)) :request-start-time (nano-to-millis start)))
-      (catch Throwable e
-        {:status 500, :exception e}))))
-
-(defn run-async [fnct & args]
-  (future (apply fnct args)))
-
-
-(defn run-times [n fnc]
-  (let [results (for [_ (range 0 n)] (fnc))]
-    (map (fn [f] @f) results)))
-
-(defn get-async-times [endpoint req-count]
-  (->> endpoint
-       (partial run-async-with-timing client/get)
-       (run-times (if (string? req-count) (Integer/parseInt req-count) req-count))))
-
-(defn async-get [endpoint]
-  (run-async-with-timing client/get endpoint {:socket-timeout 6000000 :conn-timeout 6000000}))
+    [request.util :refer :all]))
 
 
 (defn read-input [file]

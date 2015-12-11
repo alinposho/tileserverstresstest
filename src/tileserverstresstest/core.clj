@@ -5,33 +5,9 @@
     [incanter.core :refer :all]
     [incanter.charts :refer :all]
     [incanter.stats :refer :all]
-    [clojure.tools.logging :as log]))
+    [clojure.tools.logging :as log]
+    [request.util :refer :all]))
 
-(defn- nano-to-millis [nanos]
-  (/ (double nanos) 1000000.0))
-
-(defn run-async
-  "Run the function on a separate thread of execution.
-  Exception are materialized and returned in the response.
-  Returns a future."
-  [fnct & args]
-  (future
-    (try
-      (Thread/sleep 200)
-      (let [start (. System (nanoTime))
-            res (apply fnct args)]
-        (assoc res :elapsed-time (nano-to-millis (- (. System (nanoTime)) start)) :request-start-time (nano-to-millis start)))
-      (catch Throwable e
-        {:status 500, :exception e}))))
-
-(defn run-times [n fnc]
-  (let [results (for [_ (range 0 n)] (fnc))]
-    (map (fn [f] @f) results)))
-
-(defn get-async-times [endpoint req-count]
-  (->> endpoint
-       (partial run-async client/get)
-       (run-times (if (string? req-count) (Integer/parseInt req-count) req-count))))
 
 (defn generate-tile [base-endpoint start-lat end-lat start-long end-long]
   (for [lat (range start-lat end-lat)
